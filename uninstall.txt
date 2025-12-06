@@ -1,0 +1,7 @@
+# Packages to uninstall from all workstations
+# These packages will be removed if they are installed
+#
+# Example: If you want to replace omarchy-chromium with google-chrome,
+# add omarchy-chromium here and google-chrome to packages.txt
+#
+# omarchy-chromium

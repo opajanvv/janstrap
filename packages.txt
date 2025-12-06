@@ -1,0 +1,25 @@
+# Common packages for all workstations
+git
+stow  # Required for dotfile management - do not remove
+neovim
+tmux
+ripgrep
+fd
+curl
+wget
+unzip
+tar
+starship
+zsh
+openssh
+hyprland
+waybar
+ghostty
+firefox
+pipewire
+wireplumber
+grim
+slurp
+wl-clipboard
+noto-fonts
+
