@@ -227,10 +227,11 @@ sudo visudo -f /etc/sudoers.d/janstrap
 
 Add (replace `yourusername`):
 ```
-yourusername ALL=(ALL) NOPASSWD: /usr/bin/yay, /usr/bin/pacman, /usr/bin/systemctl enable *, /usr/bin/systemctl start *, /usr/bin/systemctl mask *
+yourusername ALL=(ALL) ALL
 ```
 
 **Without this:** Auto-updates will fail at package installation. Manual runs will prompt for password.
+**Note:** now `sudo` will not ask your password anymore.
 
 ## Omarchy-Specific Notes
 
