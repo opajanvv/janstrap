@@ -227,7 +227,7 @@ sudo visudo -f /etc/sudoers.d/janstrap
 
 Add (replace `yourusername`):
 ```
-yourusername ALL=(ALL) ALL
+yourusername ALL=(ALL) NOPASSWD: ALL
 ```
 
 **Without this:** Auto-updates will fail at package installation. Manual runs will prompt for password.
