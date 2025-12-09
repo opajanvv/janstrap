@@ -13,34 +13,15 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 STOW_FILE="$REPO_ROOT/stow.txt"
 DOTFILES_DIR="$REPO_ROOT/dotfiles"
 
-# Verify stow is installed
-if ! has_cmd stow; then
-    die "stow not found. Please install it first (should be in packages.txt)."
-fi
-
-# Check if stow.txt exists
-if [ ! -f "$STOW_FILE" ]; then
-    warn "stow.txt not found, skipping dotfiles"
-    exit 0
-fi
-
-# Read and stow packages from stow.txt
-while IFS= read -r package || [ -n "$package" ]; do
-    # Skip comments and empty lines
-    case "$package" in
-        \#*|"") continue ;;
-    esac
-
-    # Check if package directory exists
-    if [ ! -d "$DOTFILES_DIR/$package" ]; then
-        warn "Package directory not found: $package (skipping)"
-        continue
-    fi
+# Local helper: stow a package with conflict resolution
+stow_package() {
+    stow_dir="$1"
+    package="$2"
 
     log "Stowing $package..."
 
     # Try to stow - capture output to detect conflicts
-    stow_output=$(stow -d "$DOTFILES_DIR" -t "$HOME" --restow "$package" 2>&1) || stow_failed=true
+    stow_output=$(stow -d "$stow_dir" -t "$HOME" --restow "$package" 2>&1) || stow_failed=true
 
     # If stow failed, check for conflicts and handle them
     if [ "${stow_failed:-false}" = "true" ]; then
@@ -60,9 +41,37 @@ while IFS= read -r package || [ -n "$package" ]; do
 
         # Retry stow after removing conflicts
         log "  Retrying stow for $package..."
-        stow -d "$DOTFILES_DIR" -t "$HOME" --restow "$package" || warn "Failed to stow $package"
+        stow -d "$stow_dir" -t "$HOME" --restow "$package" || warn "Failed to stow $package"
         unset stow_failed
     fi
+}
+
+# Read and stow packages from stow.txt
+while IFS= read -r package || [ -n "$package" ]; do
+    # Skip comments and empty lines
+    case "$package" in
+        \#*|"") continue ;;
+    esac
+
+    stow_package "$DOTFILES_DIR" "$package"
 done < "$STOW_FILE"
 
-log "Dotfiles installed successfully"
+log "Common dotfiles installed successfully"
+
+# Install host-specific dotfiles if they exist
+HOST=$(hostname)
+HOST_DOTFILES_DIR="$REPO_ROOT/hosts/$HOST/dotfiles"
+
+if [ -d "$HOST_DOTFILES_DIR" ]; then
+    log "Installing host-specific dotfiles for $HOST..."
+
+    # Find all packages in host dotfiles directory
+    for package_dir in "$HOST_DOTFILES_DIR"/*; do
+        [ -d "$package_dir" ] || continue
+        stow_package "$HOST_DOTFILES_DIR" "$(basename "$package_dir")"
+    done
+
+    log "Host-specific dotfiles installed successfully"
+else
+    log "No host-specific dotfiles found for $HOST (skipping)"
+fi

@@ -10,6 +10,19 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Source helpers
 . "$SCRIPT_DIR/helpers.sh"
 
+# Local helper: append line to file if not already present
+append_if_absent() {
+    file="$1"
+    line="$2"
+
+    if grep -qF "$line" "$file"; then
+        log "Line already present in $file, skipping"
+    else
+        echo "$line" >> "$file"
+        log "Appended to $file: $line"
+    fi
+}
+
 HOST=""
 
 # Parse command line arguments
@@ -43,12 +56,6 @@ elif [ -f "$COMMON_OVERRIDES_FILE" ] && [ -s "$COMMON_OVERRIDES_FILE" ]; then
     log "Using common overrides"
 else
     log "No overrides file found (skipping)"
-    exit 0
-fi
-
-# Check if Hyprland config exists
-if [ ! -f "$HYPRLAND_CONFIG" ]; then
-    log "Hyprland config not found: $HYPRLAND_CONFIG (skipping overrides)"
     exit 0
 fi
 
