@@ -21,12 +21,15 @@ The system is designed with strict idempotency: safe to re-run, no interactive p
 ## Features
 
 - **Idempotent**: Safe to run multiple times without duplication or errors
-- **Host-specific Hyprland config**: Per-machine monitor and workspace settings
+- **Host-specific config**: Per-machine overrides for Hyprland and dotfiles
+- **Stacked overrides**: Common settings plus host-specific overrides (inheritance model)
 - **Post-install scripts**: Optional per-package scripts for service enablement, etc.
 - **GNU Stow**: Clean dotfile management with symlinks
 - **yay-based**: Uses `yay` for all package management (official repos and AUR)
 - **Auto-detection**: Automatically detects hostname
 - **Git-aware**: Pulls updates automatically, exits early if no changes
+- **Offline mode**: Run without network using `--offline` flag
+- **File cleanup**: Remove unwanted files before installation
 
 ## Repository Structure
 
@@ -35,26 +38,31 @@ janstrap/
 ├── install_all.sh          # Main entry point
 ├── packages.txt            # Packages to install
 ├── uninstall.txt           # Packages to remove
+├── remove_files.txt        # Files to remove before installation
 ├── stow.txt                # Dotfiles to stow
-├── dotfiles/               # Common dotfiles (identical everywhere)
+├── overrides.conf          # Common Hyprland overrides (all hosts)
+├── dotfiles/               # Common dotfiles (applied to all hosts)
 │   └── waybar/
 │       └── .config/waybar/
 │           ├── config.jsonc
 │           └── style.css
 ├── install/                # Post-install scripts (optional)
-│   ├── cronie.sh           # Example: Enable cronie service
-│   └── google-chrome.sh    # Example: Set Chrome as default browser
+│   └── cronie.sh           # Example: Enable cronie service
 ├── hosts/
 │   ├── laptop1/
-│   │   └── overrides.conf  # Hyprland overrides (monitors, etc.)
+│   │   ├── overrides.conf  # Host-specific Hyprland overrides
+│   │   └── dotfiles/       # Host-specific dotfiles (optional)
 │   └── laptop2/
-│       └── overrides.conf  # Hyprland overrides (monitors, etc.)
+│       └── overrides.conf  # Host-specific Hyprland overrides
 └── scripts/
     ├── helpers.sh          # Utility functions (log, warn, die)
+    ├── remove_files.sh     # Remove unwanted files
     ├── uninstall_packages.sh
     ├── install_packages.sh
     ├── install_dotfiles.sh
-    └── install_overrides.sh
+    ├── install_overrides.sh
+    ├── install_cron.sh     # Optional: Set up automatic updates
+    └── setup_passwordless_sudo.sh  # One-time sudo setup
 ```
 
 ## Requirements
@@ -90,10 +98,11 @@ cd janstrap
 ```
 
 The installer will:
-- Uninstall unwanted packages (from uninstall.txt)
-- Install all packages (from packages.txt)
-- Stow all dotfiles (from dotfiles/)
-- Apply Hyprland overrides (host-specific monitor config)
+1. Remove unwanted files (from remove_files.txt)
+2. Uninstall unwanted packages (from uninstall.txt)
+3. Install all packages (from packages.txt)
+4. Stow all dotfiles (from dotfiles/ and hosts/`<hostname>`/dotfiles/)
+5. Apply Hyprland overrides (common + host-specific)
 
 ## Configuration Files
 
@@ -107,6 +116,15 @@ stow
 cronie
 google-chrome
 waybar
+```
+
+### remove_files.txt
+
+Files to remove before package installation. Use `~` for home directory paths:
+
+```
+# Files to remove (one per line)
+~/.local/share/applications/UnwantedApp.desktop
 ```
 
 ### uninstall.txt
@@ -128,21 +146,21 @@ Dotfile packages to stow (correspond to directories in `dotfiles/`):
 waybar
 ```
 
-### hosts/`<hostname>`/overrides.conf
+### Hyprland Overrides
 
-Hyprland configuration overrides - monitors, workspaces, keybindings, etc.
+JanStrap uses a **stacked override model** for Hyprland configuration:
 
-**Example - laptop with external monitor:**
+1. **Common overrides** (`overrides.conf` at repo root) - Applied to all hosts
+2. **Host-specific overrides** (`hosts/<hostname>/overrides.conf`) - Applied on top
+
+Both files are automatically sourced by Hyprland. Host-specific settings override common settings.
+
+**Example - hosts/laptop1/overrides.conf:**
 ```
-# Monitor configuration
+# Monitor configuration for laptop1
 env = GDK_SCALE,2
 monitor=HDMI-A-1,1920x1080@60,-1920x0,1
 monitor=eDP-1,1366x768@60,0x0,1
-```
-
-The override file is automatically sourced by Hyprland via `~/.config/hypr/hyprland.conf`:
-```
-source = ~/.config/hypr/overrides.conf
 ```
 
 ## Post-Install Scripts
@@ -191,10 +209,40 @@ The installer will:
 - Update dotfile symlinks
 - Re-apply overrides
 
-If no updates are found, it exits early. Use `--force` to re-apply anyway:
+**Command line options:**
 
 ```bash
-./install_all.sh --force
+./install_all.sh --force    # Re-apply even if no git updates
+./install_all.sh --offline  # Skip git fetch/pull (implies --force)
+./install_all.sh --host X   # Override hostname detection
+```
+
+## Optional Features
+
+### Passwordless Sudo
+
+For unattended operation, configure passwordless sudo:
+
+```bash
+sudo ./scripts/setup_passwordless_sudo.sh
+```
+
+This creates `/etc/sudoers.d/janstrap` allowing all sudo commands without password.
+
+### Automatic Updates via Cron
+
+To enable automatic updates every 6 hours, uncomment the cron section in `install_all.sh`:
+
+```bash
+# OPTIONAL: Install cron job for automatic updates (uncomment to enable)
+log "Installing cron job..."
+"$SCRIPTS_DIR/install_cron.sh" || warn "Cron job installation failed"
+```
+
+Or run the script manually:
+
+```bash
+./scripts/install_cron.sh
 ```
 
 ## Omarchy-Specific Notes
