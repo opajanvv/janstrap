@@ -98,5 +98,10 @@ log "Step 4/5: Installing dotfiles..."
 log "Step 5/5: Installing Hyprland overrides..."
 "$SCRIPTS_DIR/install_overrides.sh" --host "$HOST" || die "Overrides installation failed"
 
+# OPTIONAL: Install cron job for automatic updates (uncomment to enable)
+# This sets up a cron job to run install_all.sh every 6 hours
+# log "Installing cron job..."
+# "$SCRIPTS_DIR/install_cron.sh" || warn "Cron job installation failed"
+
 log "Installation complete!"
 
